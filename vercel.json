@@ -1,0 +1,1 @@
+{"rewrites":[{"source":"/content.json","destination":"/api/content"}],"headers":[{"source":"/admin.html","headers":[{"key":"X-Robots-Tag","value":"noindex, nofollow"}]},{"source":"/content.json","headers":[{"key":"X-Robots-Tag","value":"noindex"}]}]}
