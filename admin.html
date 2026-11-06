@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Portfolio Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#0b0a10;--surface:#16141d;--surface2:#1f1c2a;--fg:#f4f2f7;--muted:#9a96a8;--accent:#e50914;--line:rgba(255,255,255,.12);--ok:#3ba04a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 14px/1.5 "Manrope",system-ui,sans-serif;padding:0 max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:980px;margin:0 auto;padding-block:20px 90px}
+h1{font:400 40px/1 "Bebas Neue",Impact,sans-serif;letter-spacing:.03em;margin:0}
+h1 span{color:var(--accent)}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+a{color:inherit}
+button,.btn{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface2);border-radius:6px;padding:8px 14px;font-weight:700;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{filter:brightness(1.2)}
+button:disabled{opacity:.5;cursor:wait}
+.primary{background:var(--accent);border-color:var(--accent)}
+.sm{padding:4px 10px;font-size:12px}
+.ghost{background:none}
+:focus-visible{outline:2px solid #e0b04a;outline-offset:2px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;position:sticky;top:0;background:var(--bg);z-index:5;padding-top:8px}
+.tabs button{white-space:nowrap;background:none}
+.tabs button.on{background:var(--accent);border-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;min-width:0}
+input,textarea{font:400 14px "Manrope",system-ui,sans-serif;letter-spacing:0;text-transform:none;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%;min-width:0}
+textarea{min-height:84px;resize:vertical}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--surface2)}
+.card>.top{display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:8px}
+.row{display:flex;gap:8px;align-items:flex-end}
+.row label{flex:1}
+.group{display:flex;flex-direction:column;gap:8px}
+.cap{font:700 11px "Manrope";letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.photo{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.photo img,.photo .ph{width:96px;height:120px;border-radius:8px;object-fit:cover;background:var(--surface2);display:grid;place-items:center;color:var(--muted);font-size:11px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(11,10,16,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;gap:8px;flex-wrap:wrap;justify-content:center;z-index:20}
+.msg{position:fixed;left:50%;transform:translateX(-50%);bottom:76px;background:var(--surface2);border:1px solid var(--line);padding:10px 16px;border-radius:8px;z-index:30;max-width:92vw}
+.msg.ok{border-color:var(--ok)}.msg.err{border-color:var(--accent)}
+.hint{color:var(--muted);font-size:12px}
+#login{min-height:80vh;display:grid;place-items:center}
+#login form{width:min(380px,100%);display:flex;flex-direction:column;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px}
+</style></head><body>
+<div id="login" hidden>
+  <form id="lf"><h1>Portfolio <span>Admin</span></h1><label>Password<input id="pw" type="password" autocomplete="current-password" autofocus></label><button class="primary" id="lb" type="submit">Log in</button><div class="hint" id="le"></div></form>
+</div>
+<div class="wrap" id="app" hidden>
+  <header>
+    <h1>Portfolio <span>Admin</span></h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/" target="_blank" rel="noopener">View site ↗</a><button class="ghost" id="out">Log out</button></div>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <div class="panel" id="panel"></div>
+</div>
+<div class="bar" id="bar" hidden>
+  <button id="dl" class="ghost">Download backup</button>
+  <button id="reset" class="ghost">Discard changes</button>
+  <button id="save" class="primary">Save and publish</button>
+</div>
+<div id="msg" class="msg" hidden></div>
+<script>
+const $=id=>document.getElementById(id);
+let D=null,tab=null,PW="";
+try{PW=sessionStorage.getItem("zm_pw")||""}catch(e){}
+const LABELS={stats:["Value","Label"],links:["Name","URL"],facts:["Label","Value"],picks:["Title","Line"],eps:["Year","Title","Description"],c:["Dark colour","Bright colour"]};
+const NAMES={name:"Short name (big text)",fullName:"Full name",role:"Title",tag:"Small badge",tagline:"Tagline",years:"Years",bio:"Bio",email:"Email",phone:"Phone",location:"Location",t:"Title",s:"Subtitle / list",d:"Description",g:"Group",n:"Note",k:"Label",pts:"Bullet points",quote:"Quote",stack:"Tech stack",url:"Link",eps:"Episodes"};
+const LONG=new Set(["bio","d","quote"]);
+const nice=k=>NAMES[k]||k.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase());
+const SECTIONS={Basics:["name","fullName","role","tag","tagline","years","photo","bio","email","phone","location","links","stats"],Story:["education","experience","quote"],Achievements:["moments","certs"],Skills:["skills"],Projects:["projects"],About:["about"],Journey:["seasons"],"Top Picks":["picks"]};
+const TPL={stats:["",""],links:["",""],facts:["",""],picks:["",""],eps:["","",""],moments:{k:"",t:"",d:""},certs:"",education:{t:"",s:"",d:""},experience:{t:"",d:"",pts:[""]},skills:{g:"",n:"",s:[""]},projects:{t:"",tag:"",d:"",stack:[""],url:"",c:["#7a0f2b","#e50914"]},seasons:{s:"",eps:[["","",""]]}};
+function msg(t,kind){const m=$("msg");m.textContent=t;m.className="msg "+(kind||"");m.hidden=false;clearTimeout(msg.t);msg.t=setTimeout(()=>m.hidden=true,4000)}
+function el(tag,attrs,...kids){const e=document.createElement(tag);for(const k in(attrs||{})){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}kids.flat().forEach(c=>e.append(c));return e}
+function input(obj,key,label,long){const i=el(long?"textarea":"input",{});i.value=obj[key]??"";i.addEventListener("input",()=>{obj[key]=i.value});return el("label",{},label,i)}
+function photoField(obj,key){
+  const prev=obj[key]?el("img",{src:obj[key],alt:""}):el("div",{class:"ph"},"No photo");
+  const f=el("input",{type:"file",accept:"image/*"});
+  f.addEventListener("change",()=>{const file=f.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const max=900,s=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);obj[key]=c.toDataURL("image/jpeg",.82);render();msg("Photo added. Press Save and publish to keep it.","ok")};im.src=r.result};r.readAsDataURL(file)});
+  const rm=el("button",{class:"sm",type:"button",onclick:()=>{obj[key]="";render()}},"Remove");
+  return el("div",{class:"group"},el("div",{class:"cap"},"Photo"),el("div",{class:"photo"},prev,el("div",{class:"group"},f,el("span",{class:"hint"},"A portrait with a clean background works best. It is resized to 900px."),obj[key]?rm:"")));
+}
+function listField(arr,label,key){
+  const g=el("div",{class:"group"},el("div",{class:"cap"},label));
+  const holder=el("div",{class:"group"});g.append(holder);
+  const draw=()=>{holder.innerHTML="";
+    arr.forEach((it,i)=>{
+      let row;
+      const del=el("button",{class:"sm",type:"button",onclick:()=>{arr.splice(i,1);draw()}},"Remove");
+      if(Array.isArray(it)){
+        const names=LABELS[key]||[];
+        row=el("div",{class:"row"},it.map((_,j)=>{const inp=el("input",{});inp.value=it[j]??"";inp.addEventListener("input",()=>{it[j]=inp.value});return el("label",{},names[j]||("Field "+(j+1)),inp)}),del);
+      }else if(it&&typeof it==="object"){
+        row=el("div",{class:"card"},el("div",{class:"top"},el("span",{},(it.t||it.g||it.s||it.k||"Item")+""),del),objFields(it));
+      }else{
+        const inp=el("input",{});inp.value=it;inp.addEventListener("input",()=>{arr[i]=inp.value});
+        row=el("div",{class:"row"},el("label",{},"",inp),del);
+      }
+      holder.append(row);
+    });
+    holder.append(el("div",{},el("button",{class:"sm",type:"button",onclick:()=>{arr.push(TPL[key]!==undefined?JSON.parse(JSON.stringify(TPL[key])):"");draw()}},"+ Add")));
+  };
+  draw();return g;
+}
+function colors(o,k){const a=o[k];return el("div",{class:"row"},a.map((c,i)=>{const inp=el("input",{type:"color"});inp.value=c;inp.addEventListener("input",()=>{a[i]=inp.value});return el("label",{},LABELS.c[i],inp)}))}
+function objFields(o){
+  const box=el("div",{class:"group"});
+  for(const k in o){
+    const v=o[k];
+    if(k==="photo")box.append(photoField(o,k));
+    else if(typeof v==="string")box.append(input(o,k,nice(k),LONG.has(k)));
+    else if(Array.isArray(v)){if(k==="c")box.append(colors(o,k));else box.append(listField(v,nice(k),k))}
+    else if(v&&typeof v==="object")box.append(el("div",{class:"card"},el("div",{class:"cap"},nice(k)),objFields(v)));
+  }
+  return box;
+}
+function render(){
+  const names=Object.keys(SECTIONS);if(!tab)tab=names[0];
+  $("tabs").innerHTML="";
+  names.forEach(n=>$("tabs").append(el("button",{class:n===tab?"on":"",onclick:()=>{tab=n;render()}},n)));
+  const p=$("panel");p.innerHTML="";
+  const sub={};SECTIONS[tab].forEach(k=>{if(k in D)sub[k]=D[k]});
+  const view=new Proxy({},{ownKeys:()=>Object.keys(sub),getOwnPropertyDescriptor:k=>({enumerable:true,configurable:true,value:D[k]}),get:(_,k)=>D[k],set:(_,k,v)=>{D[k]=v;return true}});
+  p.append(objFields(view));
+}
+async function loadContent(){
+  try{const r=await fetch("/content.json",{cache:"no-store"});D=await r.json()}catch(e){msg("Could not load the content.","err");D={}}
+  tab=null;render();
+}
+function showApp(){$("login").hidden=true;$("app").hidden=false;$("bar").hidden=false;loadContent()}
+async function tryLogin(pw){
+  const r=await fetch("/api/save?check=1",{method:"POST",headers:{"x-admin-password":pw}});
+  return r.ok;
+}
+$("lf").addEventListener("submit",async e=>{
+  e.preventDefault();const b=$("lb");b.disabled=true;$("le").textContent="";
+  try{const pw=$("pw").value;if(await tryLogin(pw)){PW=pw;try{sessionStorage.setItem("zm_pw",pw)}catch(_){}showApp()}else $("le").textContent="Wrong password. Try again."}
+  catch(err){$("le").textContent="Could not reach the server."}
+  b.disabled=false;
+});
+$("out").onclick=()=>{try{sessionStorage.removeItem("zm_pw")}catch(e){}PW="";location.reload()};
+$("reset").onclick=()=>{loadContent();msg("Changes discarded.","ok")};
+$("dl").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(D,null,2)],{type:"application/json"}));a.download="content-backup.json";a.click()};
+$("save").onclick=async()=>{
+  const b=$("save");b.disabled=true;b.textContent="Saving...";
+  try{
+    const r=await fetch("/api/save",{method:"POST",headers:{"x-admin-password":PW,"Content-Type":"application/json"},body:JSON.stringify(D)});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok)msg("Saved. The site shows the new content now.","ok");else msg(j.error||"Save failed","err");
+  }catch(e){msg("Could not reach the server.","err")}
+  b.disabled=false;b.textContent="Save and publish";
+};
+(async()=>{
+  if(PW){try{if(await tryLogin(PW)){showApp();return}}catch(e){}}
+  $("login").hidden=false;
+})();
+</script></body></html>
